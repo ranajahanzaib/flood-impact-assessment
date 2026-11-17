@@ -7,27 +7,73 @@ on:
     branches: [main]
 
 jobs:
-  build:
+  backend-test:
+    name: Backend Tests & Lint
     runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: "pip"
+
+      - name: Install system geospatial dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libgdal-dev gdal-bin
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff pytest
+          pip install -e ".[dev]"
+
+      - name: Run Ruff Linting
+        run: |
+          ruff check .
+
+      - name: Run Automated Test Suite
+        run: |
+          pytest -v
+
+      - name: Verify Model Adapter & Calibration
+        run: |
+          python -c "from ml.evaluation.metrics import compute_segmentation_metrics; import numpy as np; m = compute_segmentation_metrics(np.random.randint(0, 2, (50, 50)), np.random.randint(0, 2, (50, 50))); assert 'iou' in m"
+
+  frontend-check:
+    name: Frontend Typecheck & Lint
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: apps/web
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
+          cache: "pnpm"
+          cache-dependency-path: apps/web/pnpm-lock.yaml
 
-      # Uncomment and adjust the steps below to match your project's setup
+      - name: Install Node dependencies
+        run: pnpm install --frozen-lockfile
 
-      # - name: Install dependencies
-      #   run: npm ci
+      - name: Run TypeScript Typecheck
+        run: pnpm run typecheck
 
-      # - name: Lint
-      #   run: npm run lint
+      - name: Run ESLint
+        run: pnpm run lint
 
-      # - name: Run tests
-      #   run: npm test
-
-      # - name: Build
-      #   run: npm run build
+      - name: Verify Next.js Build
+        run: pnpm run build
