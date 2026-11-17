@@ -8,7 +8,7 @@ version = "0.1.0"
 description = "Multi-Sensor Flood Impact Evidence Platform"
 readme = "README.md"
 requires-python = ">=3.10"
-license = { text = "MIT" }
+license = "MIT"
 authors = [{ name = "Flood Impact Assessment Team" }]
 dependencies = [
     "fastapi>=0.109.0",
@@ -39,6 +39,11 @@ dev = [
     "pytest-cov>=4.1.0",
     "ruff>=0.2.0",
 ]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["geospatial*", "ml*", "services*", "reports*"]
+exclude = ["tests*", "apps*", "data*", "scripts*"]
 
 [tool.ruff]
 line-length = 100
