@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
-import { useParams } from "next/navigation";
-import Link from "next/link";
 import { api } from "@/lib/api";
+import Link from "next/link";
+import { useParams } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export default function EventWorkspacePage() {
   const params = useParams();
@@ -33,11 +33,7 @@ export default function EventWorkspacePage() {
   const mapContainerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
 
-  useEffect(() => {
-    loadEventData();
-  }, [eventId]);
-
-  const loadEventData = async () => {
+  const loadEventData = useCallback(async () => {
     setLoading(true);
     try {
       const ev = await api.getEvent(eventId);
@@ -63,7 +59,11 @@ export default function EventWorkspacePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [eventId]);
+
+  useEffect(() => {
+    loadEventData();
+  }, [loadEventData]);
 
   const handleRunAnalysis = async (method: string = "baseline") => {
     setAnalyzing(true);
@@ -95,7 +95,11 @@ export default function EventWorkspacePage() {
   const handleReviewDecision = async (decision: string) => {
     if (!activeReviewRegion) return;
     try {
-      await api.submitReviewDecision(activeReviewRegion.id, decision, reviewerNotes);
+      await api.submitReviewDecision(
+        activeReviewRegion.id,
+        decision,
+        reviewerNotes,
+      );
       setActiveReviewRegion(null);
       setReviewerNotes("");
       if (activeAnalysis) {
@@ -108,17 +112,28 @@ export default function EventWorkspacePage() {
   };
 
   // Find preview images for active analysis
-  const classificationOutput = outputs.find((o) => o.product_type === "flood_classification");
-  const newInundationOutput = outputs.find((o) => o.product_type === "new_inundation");
-  const persistenceOutput = outputs.find((o) => o.product_type === "persistence");
-  const uncertaintyOutput = outputs.find((o) => o.product_type === "uncertainty");
+  const classificationOutput = outputs.find(
+    (o) => o.product_type === "flood_classification",
+  );
+  const newInundationOutput = outputs.find(
+    (o) => o.product_type === "new_inundation",
+  );
+  const persistenceOutput = outputs.find(
+    (o) => o.product_type === "persistence",
+  );
+  const uncertaintyOutput = outputs.find(
+    (o) => o.product_type === "uncertainty",
+  );
 
   return (
     <div className="flex-1 flex flex-col h-[calc(100vh-57px)] overflow-hidden">
       {/* Top Event Workspace Header */}
       <div className="bg-[#0c1220] border-b border-[#1e293b] px-6 py-3 flex flex-wrap items-center justify-between gap-4 z-20">
         <div className="flex items-center space-x-4">
-          <Link href="/events" className="text-slate-400 hover:text-white text-xs font-mono">
+          <Link
+            href="/events"
+            className="text-slate-400 hover:text-white text-xs font-mono"
+          >
             &larr; Events
           </Link>
           <div className="h-4 w-px bg-slate-700"></div>
@@ -130,7 +145,8 @@ export default function EventWorkspacePage() {
               </span>
             </h1>
             <span className="text-[11px] text-slate-400 font-mono">
-              {event?.country || "Global"} &bull; {observations.length} Registered Observations
+              {event?.country || "Global"} &bull; {observations.length}{" "}
+              Registered Observations
             </span>
           </div>
         </div>
@@ -161,7 +177,9 @@ export default function EventWorkspacePage() {
             disabled={analyzing || observations.length === 0}
             className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded text-xs font-medium shadow-sm transition-colors"
           >
-            {analyzing ? `Processing (${activeAnalysis?.progress_pct || 0}%)...` : "Run Multi-Sensor Analysis"}
+            {analyzing
+              ? `Processing (${activeAnalysis?.progress_pct || 0}%)...`
+              : "Run Multi-Sensor Analysis"}
           </button>
         </div>
       </div>
@@ -212,9 +230,16 @@ export default function EventWorkspacePage() {
                       const x = e.clientX - rect.left;
                       const y = e.clientY - rect.top;
                       setInspectorData({
-                        lat: (event?.bounds_geojson?.[1] || 50.5) + (y / rect.height) * 0.1,
-                        lon: (event?.bounds_geojson?.[0] || 7.0) + (x / rect.width) * 0.1,
-                        classification: activeLayer === "classification" ? "Newly Inundated Land" : activeLayer,
+                        lat:
+                          (event?.bounds_geojson?.[1] || 50.5) +
+                          (y / rect.height) * 0.1,
+                        lon:
+                          (event?.bounds_geojson?.[0] || 7.0) +
+                          (x / rect.width) * 0.1,
+                        classification:
+                          activeLayer === "classification"
+                            ? "Newly Inundated Land"
+                            : activeLayer,
                         confidence: 0.94,
                         sensor: "Sentinel-1 SAR / Sentinel-2 Composite",
                         model: activeAnalysis.config_json?.method || "baseline",
@@ -231,12 +256,23 @@ export default function EventWorkspacePage() {
                   <div className="absolute bottom-6 left-6 z-30 bg-[#0f172a]/95 border border-[#1e293b] rounded-lg p-3 text-xs font-mono text-slate-300 shadow-xl backdrop-blur max-w-xs space-y-1">
                     <div className="flex items-center justify-between font-bold text-white mb-1 border-b border-slate-700 pb-1">
                       <span>Evidence Inspection</span>
-                      <button onClick={() => setInspectorData(null)} className="text-slate-400 hover:text-white">
+                      <button
+                        onClick={() => setInspectorData(null)}
+                        className="text-slate-400 hover:text-white"
+                      >
                         &times;
                       </button>
                     </div>
-                    <div>Lat/Lon: {inspectorData.lat.toFixed(4)}, {inspectorData.lon.toFixed(4)}</div>
-                    <div>Class: <span className="text-rose-400 font-bold">{inspectorData.classification}</span></div>
+                    <div>
+                      Lat/Lon: {inspectorData.lat.toFixed(4)},{" "}
+                      {inspectorData.lon.toFixed(4)}
+                    </div>
+                    <div>
+                      Class:{" "}
+                      <span className="text-rose-400 font-bold">
+                        {inspectorData.classification}
+                      </span>
+                    </div>
                     <div>Sensor: {inspectorData.sensor}</div>
                     <div>Engine: {inspectorData.model}</div>
                     <div>Uncertainty: {inspectorData.uncertainty} (Low)</div>
@@ -247,7 +283,8 @@ export default function EventWorkspacePage() {
               <div className="text-center space-y-3 p-8">
                 <div className="w-10 h-10 border-2 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto"></div>
                 <div className="text-sm font-semibold text-white">
-                  {activeAnalysis?.stage_message || "Reconstructing flood extent..."}
+                  {activeAnalysis?.stage_message ||
+                    "Reconstructing flood extent..."}
                 </div>
                 <div className="text-xs font-mono text-slate-400">
                   Stage Progress: {activeAnalysis?.progress_pct || 0}%
@@ -258,7 +295,9 @@ export default function EventWorkspacePage() {
                 <div className="w-12 h-12 rounded-full bg-[#161f30] flex items-center justify-center mx-auto text-blue-400">
                   🛰️
                 </div>
-                <h3 className="text-base font-semibold text-white">Observation Grid Ready</h3>
+                <h3 className="text-base font-semibold text-white">
+                  Observation Grid Ready
+                </h3>
                 <p className="text-xs text-slate-400 leading-relaxed">
                   {observations.length > 0
                     ? `${observations.length} observations registered for this flood event. Click 'Run Multi-Sensor Analysis' to reconstruct extent and measure infrastructure exposure.`
@@ -281,7 +320,9 @@ export default function EventWorkspacePage() {
                 <button
                   onClick={() => setActiveLayer("classification")}
                   className={`px-3 py-1 rounded transition-colors ${
-                    activeLayer === "classification" ? "bg-blue-600 text-white" : "text-slate-400 hover:text-white"
+                    activeLayer === "classification"
+                      ? "bg-blue-600 text-white"
+                      : "text-slate-400 hover:text-white"
                   }`}
                 >
                   Full Classification
@@ -289,7 +330,9 @@ export default function EventWorkspacePage() {
                 <button
                   onClick={() => setActiveLayer("new_inundation")}
                   className={`px-3 py-1 rounded transition-colors ${
-                    activeLayer === "new_inundation" ? "bg-rose-600 text-white" : "text-slate-400 hover:text-white"
+                    activeLayer === "new_inundation"
+                      ? "bg-rose-600 text-white"
+                      : "text-slate-400 hover:text-white"
                   }`}
                 >
                   Newly Inundated
@@ -297,7 +340,9 @@ export default function EventWorkspacePage() {
                 <button
                   onClick={() => setActiveLayer("persistence")}
                   className={`px-3 py-1 rounded transition-colors ${
-                    activeLayer === "persistence" ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-white"
+                    activeLayer === "persistence"
+                      ? "bg-indigo-600 text-white"
+                      : "text-slate-400 hover:text-white"
                   }`}
                 >
                   Persistence
@@ -305,7 +350,9 @@ export default function EventWorkspacePage() {
                 <button
                   onClick={() => setActiveLayer("uncertainty")}
                   className={`px-3 py-1 rounded transition-colors ${
-                    activeLayer === "uncertainty" ? "bg-amber-600 text-white" : "text-slate-400 hover:text-white"
+                    activeLayer === "uncertainty"
+                      ? "bg-amber-600 text-white"
+                      : "text-slate-400 hover:text-white"
                   }`}
                 >
                   Uncertainty
@@ -382,7 +429,8 @@ export default function EventWorkspacePage() {
             </div>
 
             <div className="text-[11px] font-mono text-slate-400">
-              CRS: {activeAnalysis?.config_json?.output_crs || "EPSG:4326"} &bull; Res: 10m
+              CRS: {activeAnalysis?.config_json?.output_crs || "EPSG:4326"}{" "}
+              &bull; Res: 10m
             </div>
           </div>
         </div>
@@ -398,24 +446,34 @@ export default function EventWorkspacePage() {
             {metrics ? (
               <div className="space-y-3">
                 <div className="bg-[#161f30] border border-[#233149] rounded p-3">
-                  <span className="text-[11px] text-slate-400 block">Newly Inundated Land</span>
+                  <span className="text-[11px] text-slate-400 block">
+                    Newly Inundated Land
+                  </span>
                   <span className="text-xl font-bold text-rose-400">
                     {(metrics.newly_flooded_m2 / 1e6).toFixed(2)} km²
                   </span>
                   <span className="text-[10px] text-slate-500 font-mono block mt-0.5">
-                    {(metrics.newly_flooded_m2 / 10000).toLocaleString(undefined, { maximumFractionDigits: 1 })} ha
+                    {(metrics.newly_flooded_m2 / 10000).toLocaleString(
+                      undefined,
+                      { maximumFractionDigits: 1 },
+                    )}{" "}
+                    ha
                   </span>
                 </div>
 
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div className="bg-[#161f30] p-2.5 rounded border border-[#233149]">
-                    <span className="text-[10px] text-slate-400 block">Pre-Existing Water</span>
+                    <span className="text-[10px] text-slate-400 block">
+                      Pre-Existing Water
+                    </span>
                     <span className="font-bold text-slate-200">
                       {(metrics.preexisting_water_m2 / 1e6).toFixed(2)} km²
                     </span>
                   </div>
                   <div className="bg-[#161f30] p-2.5 rounded border border-[#233149]">
-                    <span className="text-[10px] text-slate-400 block">Observed Recession</span>
+                    <span className="text-[10px] text-slate-400 block">
+                      Observed Recession
+                    </span>
                     <span className="font-bold text-emerald-400">
                       {(metrics.receded_flooded_m2 / 1e6).toFixed(2)} km²
                     </span>
@@ -424,14 +482,20 @@ export default function EventWorkspacePage() {
 
                 <div className="grid grid-cols-2 gap-2 text-xs">
                   <div className="bg-[#161f30] p-2.5 rounded border border-[#233149]">
-                    <span className="text-[10px] text-slate-400 block">Affected Buildings</span>
+                    <span className="text-[10px] text-slate-400 block">
+                      Affected Buildings
+                    </span>
                     <span className="font-bold text-amber-400">
                       {metrics.affected_buildings.toLocaleString()}
                     </span>
-                    <span className="text-[10px] text-slate-500 block">of {metrics.total_buildings}</span>
+                    <span className="text-[10px] text-slate-500 block">
+                      of {metrics.total_buildings}
+                    </span>
                   </div>
                   <div className="bg-[#161f30] p-2.5 rounded border border-[#233149]">
-                    <span className="text-[10px] text-slate-400 block">Inundated Roads</span>
+                    <span className="text-[10px] text-slate-400 block">
+                      Inundated Roads
+                    </span>
                     <span className="font-bold text-sky-400">
                       {(metrics.affected_road_meters / 1000).toFixed(2)} km
                     </span>
@@ -468,20 +532,24 @@ export default function EventWorkspacePage() {
                     onClick={() => setActiveReviewRegion(reg)}
                   >
                     <div className="flex items-center justify-between font-medium">
-                      <span className="text-slate-200">Flag: {reg.flag_type}</span>
+                      <span className="text-slate-200">
+                        Flag: {reg.flag_type}
+                      </span>
                       <span
                         className={`text-[10px] px-1.5 py-0.5 rounded font-mono ${
                           reg.status === "pending"
                             ? "bg-amber-950 text-amber-300"
                             : reg.status === "confirmed_flood"
-                            ? "bg-rose-950 text-rose-300"
-                            : "bg-emerald-950 text-emerald-300"
+                              ? "bg-rose-950 text-rose-300"
+                              : "bg-emerald-950 text-emerald-300"
                         }`}
                       >
                         {reg.status}
                       </span>
                     </div>
-                    <p className="text-[11px] text-slate-400 line-clamp-2">{reg.reason}</p>
+                    <p className="text-[11px] text-slate-400 line-clamp-2">
+                      {reg.reason}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -499,10 +567,17 @@ export default function EventWorkspacePage() {
             </h2>
             <div className="space-y-2">
               {observations.map((obs) => (
-                <div key={obs.id} className="p-2.5 bg-[#161f30] rounded border border-[#233149] text-xs">
+                <div
+                  key={obs.id}
+                  className="p-2.5 bg-[#161f30] rounded border border-[#233149] text-xs"
+                >
                   <div className="flex items-center justify-between font-mono text-[11px] mb-1">
-                    <span className="font-bold text-sky-400 uppercase">{obs.sensor}</span>
-                    <span className="text-slate-400 capitalize">{obs.event_phase}</span>
+                    <span className="font-bold text-sky-400 uppercase">
+                      {obs.sensor}
+                    </span>
+                    <span className="text-slate-400 capitalize">
+                      {obs.event_phase}
+                    </span>
                   </div>
                   <div className="text-slate-300 text-[11px]">
                     {new Date(obs.observation_time).toLocaleString()}
@@ -522,7 +597,9 @@ export default function EventWorkspacePage() {
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-[#0f172a] border border-[#1e293b] rounded-lg max-w-md w-full p-6 space-y-4 shadow-2xl">
             <div>
-              <h3 className="text-base font-bold text-white">Manual Analyst Verification</h3>
+              <h3 className="text-base font-bold text-white">
+                Manual Analyst Verification
+              </h3>
               <p className="text-xs text-slate-400 mt-1">
                 Region flagged due to sensor disagreement or high entropy.
               </p>
@@ -530,8 +607,15 @@ export default function EventWorkspacePage() {
 
             <div className="p-3 bg-[#161f30] rounded border border-[#233149] text-xs font-mono space-y-1">
               <div>Region ID: {activeReviewRegion.id}</div>
-              <div>Flag Type: <span className="text-amber-400">{activeReviewRegion.flag_type}</span></div>
-              <div className="text-slate-300 mt-2">{activeReviewRegion.reason}</div>
+              <div>
+                Flag Type:{" "}
+                <span className="text-amber-400">
+                  {activeReviewRegion.flag_type}
+                </span>
+              </div>
+              <div className="text-slate-300 mt-2">
+                {activeReviewRegion.reason}
+              </div>
             </div>
 
             <div>

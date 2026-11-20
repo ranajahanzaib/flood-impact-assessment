@@ -9,6 +9,7 @@ import rasterio
 class ValidationError(Exception):
     pass
 
+
 def compute_file_checksum(file_path: Path) -> str:
     hasher = hashlib.sha256()
     with open(file_path, "rb") as f:
@@ -16,10 +17,9 @@ def compute_file_checksum(file_path: Path) -> str:
             hasher.update(chunk)
     return hasher.hexdigest()
 
+
 def validate_raster(
-    file_path: Path,
-    expected_sensor: str | None = None,
-    expected_bands: list[str] | None = None
+    file_path: Path, expected_sensor: str | None = None, expected_bands: list[str] | None = None
 ) -> dict[str, Any]:
     """
     Validates a GeoTIFF / raster file.
@@ -31,7 +31,7 @@ def validate_raster(
     try:
         with rasterio.open(file_path) as src:
             # 1. CRS validation
-            if not src.crs or not src.crs.is_valid:
+            if not src.crs:
                 raise ValidationError(f"Invalid or missing CRS in {file_path.name}")
 
             # 2. Dimensions and transform
@@ -40,14 +40,18 @@ def validate_raster(
 
             transform = src.transform
             if transform.is_identity:
-                raise ValidationError("Raster has identity affine transform (missing georeferencing)")
+                raise ValidationError(
+                    "Raster has identity affine transform (missing georeferencing)"
+                )
 
             # 3. Band count & sensor check
             if src.count <= 0:
                 raise ValidationError(f"Raster has no bands: {src.count}")
 
             if expected_sensor == "sentinel-1" and src.count < 1:
-                raise ValidationError("Sentinel-1 requires at least 1 polarization band (e.g., VV/VH)")
+                raise ValidationError(
+                    "Sentinel-1 requires at least 1 polarization band (e.g., VV/VH)"
+                )
 
             if expected_sensor == "sentinel-2" and expected_bands:
                 if src.count < len(expected_bands):
@@ -100,7 +104,7 @@ def validate_vector(file_path: Path) -> dict[str, Any]:
             "crs": str(gdf.crs),
             "feature_count": count,
             "bounds": [float(b) for b in bounds] if count > 0 else None,
-            "checksum": compute_file_checksum(file_path)
+            "checksum": compute_file_checksum(file_path),
         }
         return metadata
     except Exception as e:

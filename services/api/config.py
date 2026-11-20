@@ -1,8 +1,9 @@
 from pathlib import Path
 
-from pydantic_settings import BaseSettings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "Flood Impact Assessment"
@@ -27,12 +28,17 @@ class Settings(BaseSettings):
     # CORS
     CORS_ORIGINS: list[str] = ["http://localhost:3000", "http://127.0.0.1:3000", "*"]
 
-    class Config:
-        env_file = ".env"
-        extra = "ignore"
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore")
+
 
 settings = Settings()
 
 # Ensure directories exist
-for d in [settings.DATA_DIR, settings.CACHE_DIR, settings.UPLOADS_DIR, settings.PROCESSED_DIR, settings.EXPORTS_DIR]:
+for d in [
+    settings.DATA_DIR,
+    settings.CACHE_DIR,
+    settings.UPLOADS_DIR,
+    settings.PROCESSED_DIR,
+    settings.EXPORTS_DIR,
+]:
     d.mkdir(parents=True, exist_ok=True)

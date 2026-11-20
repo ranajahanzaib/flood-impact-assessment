@@ -12,14 +12,15 @@ def compute_binary_entropy(prob: np.ndarray) -> np.ndarray:
     Range: [0, 1]. Maximum at prob=0.5 (maximum uncertainty).
     """
     p = np.clip(prob, 1e-6, 1.0 - 1e-6)
-    entropy = - (p * np.log2(p) + (1.0 - p) * np.log2(1.0 - p))
+    entropy = -(p * np.log2(p) + (1.0 - p) * np.log2(1.0 - p))
     return np.clip(entropy, 0.0, 1.0)
+
 
 def detect_sensor_disagreement(
     s1_water_prob: np.ndarray,
     s2_water_prob: np.ndarray,
     s2_valid_mask: np.ndarray,
-    disagreement_threshold: float = 0.4
+    disagreement_threshold: float = 0.4,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Identifies regions where Sentinel-1 SAR and Sentinel-2 optical disagree.
@@ -32,11 +33,12 @@ def detect_sensor_disagreement(
     has_disagreement = (disagreement_magnitude >= disagreement_threshold) & s2_valid_mask
     return disagreement_magnitude, has_disagreement
 
+
 def build_composite_uncertainty(
     water_prob: np.ndarray,
     valid_mask: np.ndarray,
     sensor_disagreement: np.ndarray | None = None,
-    observation_gap_mask: np.ndarray | None = None
+    observation_gap_mask: np.ndarray | None = None,
 ) -> tuple[np.ndarray, np.ndarray]:
     """
     Builds composite uncertainty raster combining:
@@ -44,7 +46,7 @@ def build_composite_uncertainty(
     - Observation validity (cloud / no-data)
     - Multi-sensor disagreement
     - Temporal observation gaps
-    
+
     Returns:
         (uncertainty_raster, high_uncertainty_mask):
         uncertainty_raster: float array in [0, 1]
@@ -70,17 +72,18 @@ def build_composite_uncertainty(
     high_uncertainty_mask = uncertainty >= 0.6
     return uncertainty.astype(np.float32), high_uncertainty_mask
 
+
 def extract_manual_review_regions(
     uncertainty_raster: np.ndarray,
     transform: rasterio.Affine,
     crs: str,
     sensor_disagreement_mask: np.ndarray | None = None,
-    min_pixels: int = 16
+    min_pixels: int = 16,
 ) -> list[dict[str, Any]]:
     """
     Extracts contiguous spatial clusters requiring manual review by human analyst.
     """
-    flag_mask = (uncertainty_raster >= 0.65)
+    flag_mask = uncertainty_raster >= 0.65
     if not np.any(flag_mask):
         return []
 
@@ -97,11 +100,17 @@ def extract_manual_review_regions(
                 flag_type = "high_entropy"
 
                 # Check if sensor disagreement intersects
-                review_regions.append({
-                    "geometry": shapely.geometry.mapping(poly),
-                    "flag_type": flag_type,
-                    "reason": reason,
-                    "estimated_pixels": int(est_pixels),
-                })
+                if sensor_disagreement_mask is not None and np.any(sensor_disagreement_mask):
+                    flag_type = "sensor_disagreement"
+                    reason = "Significant classification disagreement between Sentinel-1 SAR backscatter and Sentinel-2 optical reflectance"
+
+                review_regions.append(
+                    {
+                        "geometry": shapely.geometry.mapping(poly),
+                        "flag_type": flag_type,
+                        "reason": reason,
+                        "estimated_pixels": int(est_pixels),
+                    }
+                )
 
     return review_regions

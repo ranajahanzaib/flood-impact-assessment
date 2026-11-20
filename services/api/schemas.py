@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 # --- Event Schemas ---
@@ -13,14 +13,17 @@ class FloodEventBase(BaseModel):
     end_date: datetime | None = None
     bounds_geojson: Any | None = None
 
+
 class FloodEventCreate(FloodEventBase):
     id: str | None = None
+
 
 class FloodEventUpdate(BaseModel):
     name: str | None = None
     description: str | None = None
     status: str | None = None
     bounds_geojson: Any | None = None
+
 
 class FloodEventResponse(FloodEventBase):
     id: str
@@ -29,8 +32,8 @@ class FloodEventResponse(FloodEventBase):
     observation_count: int = 0
     latest_analysis_id: str | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
 
 # --- Observation Schemas ---
 class ObservationBase(BaseModel):
@@ -43,6 +46,7 @@ class ObservationBase(BaseModel):
     resolution_m: float | None = None
     nodata: float | None = None
 
+
 class ObservationResponse(ObservationBase):
     id: str
     event_id: str
@@ -51,8 +55,8 @@ class ObservationResponse(ObservationBase):
     metadata_json: dict[str, Any] | None = None
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
 
 # --- Analysis Configuration & Run Schemas ---
 class AnalysisConfigSchema(BaseModel):
@@ -74,8 +78,10 @@ class AnalysisConfigSchema(BaseModel):
     tile_size: int = 512
     batch_size: int = 4
 
+
 class AnalysisRunCreate(BaseModel):
     config: AnalysisConfigSchema | None = None
+
 
 class GeospatialOutputResponse(BaseModel):
     id: str
@@ -87,8 +93,8 @@ class GeospatialOutputResponse(BaseModel):
     metadata_json: dict[str, Any] | None = None
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
 
 class ImpactMetricsResponse(BaseModel):
     id: str
@@ -107,8 +113,8 @@ class ImpactMetricsResponse(BaseModel):
     uncertain_road_meters: float
     metrics_breakdown_json: dict[str, Any] | None = None
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
 
 class ReviewRegionResponse(BaseModel):
     id: str
@@ -121,12 +127,13 @@ class ReviewRegionResponse(BaseModel):
     reviewed_at: datetime | None = None
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
 
 class ReviewDecisionRequest(BaseModel):
     decision: str = Field(..., description="confirmed_flood, confirmed_dry, dismissed")
     notes: str | None = None
+
 
 class AnalysisRunResponse(BaseModel):
     id: str
@@ -142,14 +149,15 @@ class AnalysisRunResponse(BaseModel):
     metrics: ImpactMetricsResponse | None = None
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
 
 # --- Infrastructure Schemas ---
 class InfrastructureImportRequest(BaseModel):
     source: str = Field("osm", description="osm or uploaded")
     layer_types: list[str] = Field(["buildings", "roads"])
     osm_query_bbox: list[float] | None = None  # [min_lon, min_lat, max_lon, max_lat]
+
 
 class InfrastructureResponse(BaseModel):
     id: str
@@ -160,14 +168,15 @@ class InfrastructureResponse(BaseModel):
     feature_count: int
     created_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
+
 
 # --- Report Schemas ---
 class ReportGenerateRequest(BaseModel):
     title: str | None = None
     include_map_render: bool = True
     include_provenance: bool = True
+
 
 class ReportResponse(BaseModel):
     report_id: str

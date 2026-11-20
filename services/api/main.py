@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -15,10 +17,18 @@ from services.api.routes import (
     tiles,
 )
 
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    init_db()
+    yield
+
+
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
-    description="Multi-Sensor Flood Impact Evidence Platform API"
+    description="Multi-Sensor Flood Impact Evidence Platform API",
+    lifespan=lifespan,
 )
 
 # CORS
@@ -30,13 +40,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Startup
-init_db()
-
-@app.on_event("startup")
-def on_startup():
-    init_db()
-
 # Routers
 app.include_router(events.router, prefix=settings.API_PREFIX)
 app.include_router(observations.router, prefix=settings.API_PREFIX)
@@ -46,17 +49,16 @@ app.include_router(reports.router, prefix=settings.API_PREFIX)
 app.include_router(reviews.router, prefix=settings.API_PREFIX)
 app.include_router(tiles.router, prefix=settings.API_PREFIX)
 
+
 @app.get(f"{settings.API_PREFIX}/health")
 def health_check():
-    return {
-        "status": "healthy",
-        "service": settings.PROJECT_NAME,
-        "version": settings.VERSION
-    }
+    return {"status": "healthy", "service": settings.PROJECT_NAME, "version": settings.VERSION}
+
 
 @app.get(f"{settings.API_PREFIX}/overview")
 def get_overview_statistics():
     from services.api.database import SessionLocal
+
     db: Session = SessionLocal()
     try:
         total_events = db.query(FloodEvent).count()
@@ -69,12 +71,7 @@ def get_overview_statistics():
 
         pending_reviews = db.query(ReviewRegion).filter(ReviewRegion.status == "pending").count()
 
-        recent_events = (
-            db.query(FloodEvent)
-            .order_by(FloodEvent.created_at.desc())
-            .limit(5)
-            .all()
-        )
+        recent_events = db.query(FloodEvent).order_by(FloodEvent.created_at.desc()).limit(5).all()
 
         return {
             "total_events": total_events,
@@ -84,14 +81,9 @@ def get_overview_statistics():
             "total_affected_road_km": round(total_affected_road_km, 2),
             "pending_manual_reviews": pending_reviews,
             "recent_events": [
-                {
-                    "id": ev.id,
-                    "name": ev.name,
-                    "country": ev.country,
-                    "created_at": ev.created_at
-                }
+                {"id": ev.id, "name": ev.name, "country": ev.country, "created_at": ev.created_at}
                 for ev in recent_events
-            ]
+            ],
         }
     finally:
         db.close()
