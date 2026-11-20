@@ -1,4 +1,4 @@
-.PHONY: setup dev run-api run-web test lint typecheck format demo download-data train evaluate docker-up docker-down
+.PHONY: setup dev run-api run-web test lint typecheck format demo download-data train evaluate docker-up docker-down screenshots
 
 PYTHON ?= .venv/bin/python
 UVICORN ?= .venv/bin/uvicorn
@@ -37,6 +37,9 @@ format:
 
 demo:
 	$(PYTHON) scripts/demo.py
+
+screenshots:
+	$(PYTHON) scripts/generate_screenshots.py
 
 download-data:
 	$(PYTHON) -m ml.datasets.impactmesh download --events EMSR548_GER --splits test --max-download-gb 5.0
